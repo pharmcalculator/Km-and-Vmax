@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Km and Vmax Calculation using Lineweaver-Burk Plot</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 24px;
+    }
+    
+    .highlight {
+      background-color: lightblue;
+      padding: 10px;
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .large-button {
+      font-size: 20px;
+    }
+
+    .large-input {
+      font-size: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div>
+    <h1>Km and Vmax Calculation using Lineweaver-Burk Plot</h1>
+    <p>Enter the substrate concentrations and corresponding metabolic rates:</p>
+    <label for="concentration">Substrate Concentration:</label>
+    <input type="number" id="concentration" class="large-input">
+    <select id="concentrationUnit" class="large-input">
+      <option value="uM">uM</option>
+      <option value="nM">nM</option>
+    </select>
+    <br><br>
+    <label for="rate">Metabolic Rate:</label>
+    <input type="number" id="rate" class="large-input">
+    <select id="rateUnit" class="large-input">
+      <option value="umol">umol/mg/mL</option>
+      <option value="nmol">nmol/mg/mL</option>
+    </select>
+    <br><br>
+    <button onclick="addData()" class="large-button">Add Data</button>
+    <br><br>
+    <button onclick="calculate()" class="large-button">Calculate</button>
+  </div>
+  
+  <div id="plotArea"></div>
+
+  <div id="data"></div>
+  
+  <script>
+    let substrateConcentrations = [];
+    let metabolicRates = [];
+    let concentrationUnit = "";
+    let rateUnit = "";
+    
+    function addData() {
+      const concentrationInput = document.getElementById('concentration');
+      const concentrationUnitInput = document.getElementById('concentrationUnit');
+      const rateInput = document.getElementById('rate');
+      const rateUnitInput = document.getElementById('rateUnit');
+      
+      const concentration = concentrationInput.value;
+      concentrationUnit = concentrationUnitInput.value;
+      const rate = rateInput.value;
+      rateUnit = rateUnitInput.value;
+      
+      if (concentration && rate) {
+        const concentrationRounded = parseFloat(concentration).toFixed(2);
+        const rateRounded = parseFloat(rate).toFixed(2);
+        
+        let concentrationValue = parseFloat(concentrationRounded);
+        let rateValue = parseFloat(rateRounded);
+        
+        if (concentrationUnit === 'nM') {
+          concentrationValue /= 1000;
+        }
+        
+        if (rateUnit === 'nmol') {
+          rateValue /= 1000;
+        }
+        
+        substrateConcentrations.push(1 / concentrationValue);
+        metabolicRates.push(1 / rateValue);
+        
+        const dataDiv = document.getElementById('data');
+        const dataEntry = document.createElement('div');
+        dataEntry.innerHTML = `Concentration: ${concentrationRounded} ${concentrationUnit}, Rate: ${rateRounded} ${rateUnit}`;
+        dataDiv.appendChild(dataEntry);
+        
+        concentrationInput.value = '';
+        rateInput.value = '';
+      }
+    }
+    
+    function calculate() {
+      const trace = {
+        x: substrateConcentrations,
+        y: metabolicRates,
+        mode: 'markers',
+        type: 'scatter'
+      };
+      
+      const data = [trace];
+      
+      const layout = {
+        title: 'Km and Vmax Calculation using Lineweaver-Burk Plot',
+        xaxis: {
+          title: '1 / [Substrate Concentration]'
+        },
+        yaxis: {
+          title: '1 / Metabolic Rate'
+        }
+      };
+      
+      const options = {
+        margin: { t: 50 },
+        autosize: false,
+        width: 800,
+        height: 600
+      };
+      
+      Plotly.newPlot('plotArea', data, layout, options);
+      
+      const bestFit = regression.linear(substrateConcentrations.map((x, i) => [x, metabolicRates[i]]));
+      const slope = bestFit.equation[0];
+      const intercept = bestFit.equation[1];
+      
+      const km = parseFloat((1 / intercept).toFixed(2));
+      const vmax = parseFloat((1 / slope).toFixed(2));
+      
+      const resultDiv = document.createElement('div');
+      resultDiv.innerHTML = `<div class="highlight">Km:<br><span style="font-size: 24px; font-weight:bold;">${km} ${concentrationUnit}</span><br>Km = 1 / (Y-intercept)</div><div class="highlight">Vmax:<br><span style="font-size: 24px; font-weight: bold;">${vmax} ${rateUnit}</span><br>Vmax = 1 / (X-intercept)</div>`;
+      
+      const lineFitDiv = document.createElement('div');
+      lineFitDiv.innerHTML = `<div class="highlight">Line Fit: y = ${slope.toFixed(2)}x + ${intercept.toFixed(2)}</div>`;
+      
+      const outputDiv = document.createElement('div');
+      outputDiv.appendChild(resultDiv);
+      outputDiv.appendChild(lineFitDiv);
+      
+      document.body.appendChild(outputDiv);
+    }
+  </script>
+  
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/regression/dist/regression.min.js"></script>
+</body>
+</html>
